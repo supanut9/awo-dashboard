@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { collectionName, getConnection } from "@/lib/db";
 import type { EventsDoc, RunDoc } from "@/lib/types";
-import { Crumb, Empty, NeedsFullDetail, OUTCOME_TEXT, Page, Section, Timeline } from "@/lib/ui";
+import { Crumb, Empty, NeedsFullDetail, OUTCOME_TEXT, Page, Section, Timeline , ProjectNav } from "@/lib/ui";
 import { Markdown } from "@/lib/markdown";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export default async function RunPage({
   if (!run) {
     return (
       <Page>
-        <Crumb href={`/p/${workspaceId}/runs`}>← runs</Crumb>
+        <ProjectNav workspaceId={workspaceId} active="runs" />
         <Empty>No run {runId} in this workspace.</Empty>
       </Page>
     );
@@ -42,7 +42,7 @@ export default async function RunPage({
 
   return (
     <Page>
-      <Crumb href={`/p/${workspaceId}/runs`}>← runs</Crumb>
+      <ProjectNav workspaceId={workspaceId} active="runs" />
       <h1 className="mb-1 mt-1.5 font-mono text-sm font-semibold">{run.runId}</h1>
       <p className="mb-4 text-xs text-neutral-500">
         <span className={OUTCOME_TEXT[run.status] ?? ""}>{run.status}</span>

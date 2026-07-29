@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { collectionName, getConnection } from "@/lib/db";
 import type { EventsDoc, RunDoc, TaskDoc } from "@/lib/types";
-import { Crumb, Empty, NeedsFullDetail, OUTCOME_TEXT, Page, Section, Timeline } from "@/lib/ui";
+import { Crumb, Empty, NeedsFullDetail, OUTCOME_TEXT, Page, Section, Timeline , ProjectNav } from "@/lib/ui";
 import { Markdown } from "@/lib/markdown";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export default async function TaskPage({
   if (!task) {
     return (
       <Page>
-        <Crumb href={`/p/${workspaceId}`}>← project</Crumb>
+        <ProjectNav workspaceId={workspaceId} active="overview" />
         <Empty>No task {taskId} in this workspace.</Empty>
       </Page>
     );
@@ -50,7 +50,7 @@ export default async function TaskPage({
 
   return (
     <Page>
-      <Crumb href={`/p/${workspaceId}`}>← project</Crumb>
+      <ProjectNav workspaceId={workspaceId} active="overview" />
       <h1 className="mb-1 mt-1.5 text-base font-semibold">
         <code className="font-mono">{task.taskId}</code> {task.name}
       </h1>

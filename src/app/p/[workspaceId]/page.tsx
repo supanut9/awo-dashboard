@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { collectionName, getConnection } from "@/lib/db";
 import type { GoalDoc, ProjectDoc, RunDoc, TaskDoc } from "@/lib/types";
-import { Crumb, Empty, OUTCOME_TEXT, Page, Section, Stat, STATUS_STYLE } from "@/lib/ui";
+import { Crumb, Empty, OUTCOME_TEXT, Page, ProjectNav, Section, Stat, STATUS_STYLE } from "@/lib/ui";
 import { Markdown } from "@/lib/markdown";
 
 export const dynamic = "force-dynamic";
@@ -53,17 +53,14 @@ export default async function ProjectPage({
 
   return (
     <Page>
-      <Crumb href="/">← all projects</Crumb>
-      <div className="mb-4 mt-1.5 flex flex-wrap items-baseline gap-2">
-        <span className="rounded bg-indigo-600 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-white">
-          {project.projectKey}
-        </span>
-        <h1 className="text-base font-semibold">{project.projectName}</h1>
-        <span className="text-xs text-neutral-500">awo {project.libraryVersion}</span>
-        <span className="ml-auto text-[11px] text-neutral-500">
-          synced {new Date(project.updatedAt).toLocaleString()}
-        </span>
-      </div>
+      <ProjectNav
+        workspaceId={workspaceId}
+        active="overview"
+        projectKey={project.projectKey}
+        projectName={project.projectName}
+        version={project.libraryVersion}
+        syncedAt={project.updatedAt}
+      />
 
       <div className="mb-4 flex flex-wrap overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
         <Stat label="Tasks" value={s.totalTasks} />
@@ -223,10 +220,41 @@ export default async function ProjectPage({
         })}
       </Section>
 
+      <Section title="Linked repos" pad={false}>
+        {project.repos.length === 0 ? (
+          <Empty>No repos linked.</Empty>
+        ) : (
+          <table className="w-full text-xs">
+            <tbody>
+              {project.repos.map((r) => (
+                <tr
+                  key={r.name}
+                  className="border-b border-neutral-100 last:border-0 dark:border-neutral-800/60"
+                >
+                  <td className="px-4 py-2 font-mono">{r.name}</td>
+                  <td className="px-4 py-2 text-neutral-500">{r.type}</td>
+                  <td
+                    className={`px-4 py-2 ${
+                      r.status === "missing"
+                        ? "text-red-600 dark:text-red-400"
+                        : r.status === "dirty"
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-emerald-600 dark:text-emerald-400"
+                    }`}
+                  >
+                    {r.status}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
       <Section
         title="Recent runs"
         pad={false}
-        right={<Crumb href={`/p/${workspaceId}/runs`}>all {s.totalRuns} runs →</Crumb>}
+        right={<Crumb href={`/p/${workspaceId}/runs`}>all {s.totalRuns} runs & logs →</Crumb>}
       >
         {runs.length === 0 ? (
           <Empty>No runs published.</Empty>

@@ -38,6 +38,66 @@ export function Crumb({ href, children }: { href: string; children: ReactNode })
   );
 }
 
+/**
+ * Every project page carries this. Without it the run history was reachable only via
+ * a small "all N runs" link inside one section, which is the same as not having it —
+ * the local dashboard has tabs, so the hosted one needs an equivalent.
+ */
+export function ProjectNav({
+  workspaceId,
+  active,
+  projectKey,
+  projectName,
+  version,
+  syncedAt,
+}: {
+  workspaceId: string;
+  active: "overview" | "runs";
+  projectKey?: string;
+  projectName?: string;
+  version?: string;
+  syncedAt?: string;
+}) {
+  const tab = (href: string, key: string, label: string): ReactNode => (
+    <Link
+      href={href}
+      className={`rounded px-2.5 py-1 text-xs font-medium ${
+        active === key
+          ? "bg-neutral-200 dark:bg-neutral-800"
+          : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100"
+      }`}
+    >
+      {label}
+    </Link>
+  );
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3">
+      <Link href="/" className="text-xs text-neutral-500 hover:text-indigo-600">
+        ←
+      </Link>
+      {projectKey && (
+        <span className="rounded bg-indigo-600 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-white">
+          {projectKey}
+        </span>
+      )}
+      {projectName && <span className="text-sm font-semibold">{projectName}</span>}
+      {version && <span className="text-xs text-neutral-500">awo {version}</span>}
+
+      <nav className="ml-2 flex gap-1">
+        {tab(`/p/${workspaceId}`, "overview", "Board")}
+        {tab(`/p/${workspaceId}/runs`, "runs", "Runs & logs")}
+      </nav>
+
+      {syncedAt && (
+        <span className="ml-auto text-[11px] text-neutral-500">
+          synced {new Date(syncedAt).toLocaleString()}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function Section({
   title,
   right,

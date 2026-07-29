@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { collectionName, getConnection } from "@/lib/db";
 import type { RunDoc } from "@/lib/types";
-import { Crumb, Empty, OUTCOME_TEXT, Page, Section } from "@/lib/ui";
+import { Crumb, Empty, OUTCOME_TEXT, Page, Section , ProjectNav } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +74,7 @@ export default async function RunsPage({
 
   return (
     <Page>
-      <Crumb href={`/p/${workspaceId}`}>← project</Crumb>
+      <ProjectNav workspaceId={workspaceId} active="overview" />
       <h1 className="mb-1 mt-1.5 text-base font-semibold">Runs</h1>
       <p className="mb-4 text-xs text-neutral-500">
         Every run, newest first — the same history <code className="font-mono">awo log list</code>{" "}
