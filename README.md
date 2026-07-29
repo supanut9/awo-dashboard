@@ -12,8 +12,7 @@ npx vercel --prod
 ```
 
 No environment variables are required — viewers connect their own cluster at
-`/connect`. Set `MONGODB_URI` (and optionally `MONGODB_DB`,
-`MONGODB_COLLECTION_PREFIX`) only if you want a deployment dedicated to one cluster.
+`/connect`.
 
 Two build notes, both already handled in `next.config.mjs`:
 
@@ -81,8 +80,6 @@ Then open `/connect` and paste the connection string. **You** supply the cluster
 this deployment ships with none, and reads nothing until you connect one. A single
 deployment can therefore serve different people looking at different clusters.
 
-Optionally set `MONGODB_URI` (plus `MONGODB_DB`, `MONGODB_COLLECTION_PREFIX`) to
-dedicate a deployment to one cluster; the cookie takes precedence when both exist.
 
 ### About handing a connection string to a website
 

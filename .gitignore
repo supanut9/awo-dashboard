@@ -1,5 +1,9 @@
 node_modules/
 .next/
-.env*.local
+# Every env file, not just *.local. There is nothing this app needs from the
+# environment — the connection string is supplied per viewer through /connect — so an
+# .env here could only be a credential committed by accident.
+.env
+.env.*
 *.tsbuildinfo
 next-env.d.ts

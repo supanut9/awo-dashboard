@@ -6,7 +6,7 @@ export async function GET(): Promise<Response> {
     const conn = await getConnection();
     if (!conn) {
       return Response.json(
-        { error: "No cluster connected. Visit /connect, or set MONGODB_URI." },
+        { error: "No cluster connected. Visit /connect." },
         { status: 409 }
       );
     }
@@ -14,7 +14,7 @@ export async function GET(): Promise<Response> {
       .collection(collectionName(conn.prefix, "projects"))
       .find({})
       .toArray();
-    return Response.json({ projects, source: conn.source });
+    return Response.json({ projects });
   } catch (e) {
     return Response.json({ error: (e as Error).message }, { status: 500 });
   }

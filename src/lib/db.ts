@@ -6,15 +6,19 @@ import { MongoClient, type Db } from "mongodb";
  * writes: the workspace on disk is canonical (awo §3.8), and a hosted copy that
  * could be edited would immediately become a second source of truth.
  *
- * Where the connection string comes from — two sources, in this order:
+ * The connection string comes from exactly ONE place: a cookie the viewer sets
+ * through /connect.
  *
- *  1. a cookie the viewer set through /connect (bring-your-own cluster)
- *  2. MONGODB_URI in the environment (a deployment dedicated to one cluster)
+ * There was a MONGODB_URI fallback, and it was a mistake for a deployment with no
+ * login. A server-side credential makes the URL itself sufficient to read every
+ * project in that cluster — anyone who finds the deployment sees everything, with no
+ * authentication anywhere in the stack. Bring-your-own-connection means the deployment
+ * is inert until a viewer supplies a string they already hold: knowing the URL grants
+ * nothing.
  *
  * The cookie is httpOnly, so page JavaScript cannot read it back, and it is never
- * persisted server-side: this deployment stores nobody's credentials. It is still a
- * credential travelling to a server you may not control — see the warning on
- * /connect and in the README.
+ * persisted server-side — this deployment stores nobody's credentials. It is still a
+ * credential travelling to a server you may not control; see the warning on /connect.
  */
 export const COOKIE = "awo_mongo";
 
@@ -23,7 +27,6 @@ const clients = new Map<string, MongoClient>();
 export interface Connection {
   db: Db;
   prefix: string;
-  source: "cookie" | "env";
 }
 
 function parse(raw: string): { uri: string; dbName: string; prefix: string } {
@@ -38,17 +41,7 @@ export function looksLikeMongoUri(uri: string): boolean {
 
 export async function getConnection(): Promise<Connection | null> {
   const jar = await cookies();
-  const fromCookie = jar.get(COOKIE)?.value;
-  const raw =
-    fromCookie ??
-    (process.env.MONGODB_URI
-      ? [
-          process.env.MONGODB_URI,
-          process.env.MONGODB_DB ?? "awo",
-          process.env.MONGODB_COLLECTION_PREFIX ?? "awo_",
-        ].join("|")
-      : undefined);
-
+  const raw = jar.get(COOKIE)?.value;
   if (!raw) return null;
 
   const { uri, dbName, prefix } = parse(raw);
@@ -63,7 +56,7 @@ export async function getConnection(): Promise<Connection | null> {
     clients.set(raw, client);
   }
 
-  return { db: client.db(dbName), prefix, source: fromCookie ? "cookie" : "env" };
+  return { db: client.db(dbName), prefix };
 }
 
 export function collectionName(prefix: string, name: string): string {
