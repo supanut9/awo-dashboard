@@ -156,17 +156,45 @@ export function Timeline({
   return (
     <ul className="divide-y divide-dashed divide-neutral-200 dark:divide-neutral-800">
       {events.map((e, i) => {
-        const detail = Object.entries(e)
-          .filter(([k]) => k !== "t" && k !== "kind")
-          .map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : String(v)}`)
-          .join("  ");
+        // `label` is prose and carries the meaning, so it gets the room. Everything
+        // else is structured — a test event's per-suite results, a commit's sha — and
+        // reads far better as chips than as one run-together k=v string.
+        const { t, kind, label, repo, ...rest } = e;
         return (
-          <li key={i} className="flex gap-3 py-1.5 text-xs">
-            <span className="shrink-0 font-mono text-neutral-500">{e.t.slice(11, 19)}</span>
-            <span className={`w-24 shrink-0 font-semibold ${kindColour[e.kind] ?? ""}`}>
-              {e.kind}
-            </span>
-            <span className="break-all text-neutral-500">{detail}</span>
+          <li key={i} className="flex gap-3 py-2 text-xs">
+            <span className="shrink-0 font-mono text-neutral-500">{t.slice(11, 19)}</span>
+            <span className={`w-20 shrink-0 font-semibold ${kindColour[kind] ?? ""}`}>{kind}</span>
+            <div className="min-w-0 flex-1">
+              {typeof label === "string" && <div className="break-words">{label}</div>}
+              {(repo !== undefined || Object.keys(rest).length > 0) && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {repo !== undefined && (
+                    <span className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                      {String(repo)}
+                    </span>
+                  )}
+                  {Object.entries(rest).map(([k, v]) => {
+                    const text = typeof v === "object" && v !== null ? JSON.stringify(v) : String(v);
+                    const good = /^(pass(ed)?|true|ok|clean)$/i.test(text);
+                    const bad = /^(fail(ed)?|false|error|dirty)$/i.test(text);
+                    return (
+                      <span
+                        key={k}
+                        className={`rounded px-1.5 py-0.5 text-[10px] ${
+                          good
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                            : bad
+                              ? "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300"
+                              : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
+                        }`}
+                      >
+                        <span className="opacity-60">{k}</span> {text}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </li>
         );
       })}

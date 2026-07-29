@@ -77,6 +77,14 @@ export default async function RunPage({
         )}
       </Section>
 
+      {detail?.workerLog && (
+        <Section title="Worker output" pad={false}>
+          <pre className="max-h-[32rem] overflow-auto px-4 py-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-neutral-700 dark:text-neutral-300">
+            {detail.workerLog}
+          </pre>
+        </Section>
+      )}
+
       <Section title="Run record">
         {detail?.markdown ? (
           <Markdown source={detail.markdown} />

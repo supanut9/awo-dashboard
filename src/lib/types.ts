@@ -69,6 +69,8 @@ export interface EventsDoc {
   taskId: string | null;
   events: { t: string; kind: string; [k: string]: unknown }[];
   markdown: string;
+  /** stdout+stderr of a dispatched worker, when the run had one. Tail only. */
+  workerLog?: string;
 }
 
 export interface RunDoc {
