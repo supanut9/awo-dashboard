@@ -1,26 +1,28 @@
 import Link from "next/link";
-import { collectionName, getConnection } from "@/lib/db";
+import { collectionName, getConnectionResult } from "@/lib/db";
 import type { ProjectDoc } from "@/lib/types";
-import { Crumb, Empty, Page } from "@/lib/ui";
+import { Crumb, Empty, Page, ConnectionProblem } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  // Resolved before the try, so the failure reason is in scope for the JSX below —
+  // getConnectionResult never throws, it returns the reason.
+  const result = await getConnectionResult();
   let rows: ProjectDoc[] = [];
-  let connected = false;
   let error: string | null = null;
 
-  try {
-    const conn = await getConnection();
-    connected = Boolean(conn);
-    if (conn) {
-      rows = await conn.db
-        .collection<ProjectDoc>(collectionName(conn.prefix, "projects"))
+  if (result.ok) {
+    try {
+      rows = await result.connection.db
+        .collection<ProjectDoc>(collectionName(result.connection.prefix, "projects"))
         .find({}, { sort: { updatedAt: -1 } })
         .toArray();
+    } catch (e) {
+      // Connected but the query failed — usually a read-only user without access to
+      // this database, which is a different problem from not connecting at all.
+      error = (e as Error).message;
     }
-  } catch (e) {
-    error = (e as Error).message;
   }
 
   return (
@@ -42,17 +44,9 @@ export default async function Home() {
         </p>
       )}
 
-      {!error && !connected && (
-        <Empty>
-          No cluster connected.{" "}
-          <Link href="/connect" className="text-indigo-600 dark:text-indigo-400">
-            Connect one
-          </Link>{" "}
-          — you supply the MongoDB your workspaces publish to.
-        </Empty>
-      )}
+      {!result.ok && <ConnectionProblem failure={result} />}
 
-      {!error && connected && rows.length === 0 && (
+      {result.ok && !error && rows.length === 0 && (
         <Empty>
           Connected, but nothing published yet. In a workspace, put{" "}
           <code className="font-mono">MONGO_URI</code> in{" "}

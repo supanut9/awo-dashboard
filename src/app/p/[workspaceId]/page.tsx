@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { collectionName, getConnection } from "@/lib/db";
+import { collectionName, getConnectionResult } from "@/lib/db";
 import type { GoalDoc, ProjectDoc, RunDoc, TaskDoc } from "@/lib/types";
-import { Crumb, Empty, OUTCOME_TEXT, Page, ProjectNav, Section, Stat, STATUS_STYLE } from "@/lib/ui";
+import { Crumb, Empty, OUTCOME_TEXT, Page, ProjectNav, Section, Stat, STATUS_STYLE, ConnectionProblem } from "@/lib/ui";
 import { Markdown } from "@/lib/markdown";
 
 export const dynamic = "force-dynamic";
@@ -14,16 +14,15 @@ export default async function ProjectPage({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  const conn = await getConnection();
-  if (!conn) {
+  const result = await getConnectionResult();
+  if (!result.ok) {
     return (
       <Page>
-        <Empty>
-          No cluster connected. <Link href="/connect">Connect one</Link>.
-        </Empty>
+        <ConnectionProblem failure={result} />
       </Page>
     );
   }
+  const conn = result.connection;
   const c = (n: string): string => collectionName(conn.prefix, n);
 
   const [project, goals, tasks, runs] = await Promise.all([

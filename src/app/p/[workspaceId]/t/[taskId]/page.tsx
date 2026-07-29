@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { collectionName, getConnection } from "@/lib/db";
+import { collectionName, getConnectionResult } from "@/lib/db";
 import type { EventsDoc, RunDoc, TaskDoc } from "@/lib/types";
-import { Crumb, Empty, NeedsFullDetail, OUTCOME_TEXT, Page, Section, Timeline , ProjectNav } from "@/lib/ui";
+import { Crumb, Empty, NeedsFullDetail, OUTCOME_TEXT, Page, Section, Timeline , ProjectNav, ConnectionProblem } from "@/lib/ui";
 import { Markdown } from "@/lib/markdown";
 
 export const dynamic = "force-dynamic";
@@ -16,16 +16,15 @@ export default async function TaskPage({
   params: Promise<{ workspaceId: string; taskId: string }>;
 }) {
   const { workspaceId, taskId } = await params;
-  const conn = await getConnection();
-  if (!conn) {
+  const result = await getConnectionResult();
+  if (!result.ok) {
     return (
       <Page>
-        <Empty>
-          No cluster connected. <Link href="/connect">Connect one</Link>.
-        </Empty>
+        <ConnectionProblem failure={result} />
       </Page>
     );
   }
+  const conn = result.connection;
   const c = (n: string): string => collectionName(conn.prefix, n);
 
   const task = await conn.db.collection<TaskDoc>(c("tasks")).findOne({ workspaceId, taskId });

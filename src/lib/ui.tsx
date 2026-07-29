@@ -98,6 +98,79 @@ export function ProjectNav({
   );
 }
 
+/**
+ * What to show when there is no working connection.
+ *
+ * The driver's own words for a blocked IP are an OpenSSL record-layer error, which
+ * tells a viewer nothing and sends them checking their password. So the cause is named
+ * and the fix is spelled out, with the raw text kept behind a disclosure for when it
+ * really is something else.
+ */
+export function ConnectionProblem({
+  failure,
+}: {
+  failure:
+    | { reason: "none" }
+    | { reason: "malformed" }
+    | { reason: "unreachable"; likely: string; detail: string };
+}) {
+  if (failure.reason === "none") {
+    return (
+      <Empty>
+        No cluster connected. <Link href="/connect">Connect one</Link>.
+      </Empty>
+    );
+  }
+  if (failure.reason === "malformed") {
+    return (
+      <Empty>
+        The stored connection is not a valid MongoDB URI.{" "}
+        <Link href="/connect">Enter it again</Link>.
+      </Empty>
+    );
+  }
+
+  const blockedIp = /access list/i.test(failure.likely);
+  return (
+    <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-[13px] text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+      <p className="font-medium">Could not reach that cluster.</p>
+      <p className="mt-1">{failure.likely}</p>
+
+      {blockedIp && (
+        <div className="mt-3 border-t border-amber-300/70 pt-2 dark:border-amber-900/60">
+          <p className="font-medium">To fix it in Atlas</p>
+          <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+            <li>Network Access → IP Access List → Add IP Address</li>
+            <li>
+              For your own machine: <em>Add Current IP Address</em>
+            </li>
+            <li>
+              For this deployment: serverless egress IPs are not fixed, so it needs{" "}
+              <code className="font-mono">0.0.0.0/0</code> — which is only acceptable with a{" "}
+              <strong>read-only user scoped to this one database</strong>
+            </li>
+          </ol>
+        </div>
+      )}
+
+      <details className="mt-3">
+        <summary className="cursor-pointer text-[12px] opacity-80">
+          the driver&apos;s own words
+        </summary>
+        <pre className="mt-1 overflow-x-auto font-mono text-[11px] whitespace-pre-wrap opacity-80">
+          {failure.detail}
+        </pre>
+      </details>
+
+      <p className="mt-3">
+        <Link href="/connect" className="underline">
+          Change the connection
+        </Link>
+      </p>
+    </div>
+  );
+}
+
 export function Section({
   title,
   right,

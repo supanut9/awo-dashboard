@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { collectionName, getConnection } from "@/lib/db";
+import { collectionName, getConnectionResult } from "@/lib/db";
 import type { RunDoc } from "@/lib/types";
-import { Crumb, Empty, OUTCOME_TEXT, Page, Section , ProjectNav } from "@/lib/ui";
+import { Crumb, Empty, OUTCOME_TEXT, Page, Section , ProjectNav, ConnectionProblem } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -19,16 +19,15 @@ export default async function RunsPage({
 }) {
   const { workspaceId } = await params;
   const filters = await searchParams;
-  const conn = await getConnection();
-  if (!conn) {
+  const result = await getConnectionResult();
+  if (!result.ok) {
     return (
       <Page>
-        <Empty>
-          No cluster connected. <Link href="/connect">Connect one</Link>.
-        </Empty>
+        <ConnectionProblem failure={result} />
       </Page>
     );
   }
+  const conn = result.connection;
 
   const query: Record<string, unknown> = { workspaceId };
   if (filters.status) query.status = filters.status;
