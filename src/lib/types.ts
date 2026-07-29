@@ -13,8 +13,24 @@ export interface ProjectDoc {
     successRate: number | null;
     avgDurationSec: number | null;
     openRuns: number;
+    /** Successes that carried no test evidence — exemptions someone chose. */
+    untestedSuccesses?: number;
+    /** §12.9 — outcomes grouped by tier/effort, computed locally and published. */
+    byTier?: TierStat[];
   };
   updatedAt: string;
+}
+
+export interface TierStat {
+  key: string;
+  tier: string;
+  effort: string | null;
+  runs: number;
+  succeeded: number;
+  successRate: number;
+  avgAttempts: number;
+  avgDurationSec: number | null;
+  totalDurationSec: number;
 }
 
 export interface GoalDoc {

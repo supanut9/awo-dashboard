@@ -53,17 +53,28 @@ export default async function ProjectPage({
     );
   }
 
-  // The tier/effort question the CLI made measurable (§12.9) — answered here from
-  // the same index, so a design guess becomes a chart rather than an argument.
-  const byTier = new Map<string, { total: number; ok: number; attempts: number }>();
-  for (const r of runs) {
-    const key = `${r.tier ?? "—"}${r.effort ? ` / ${r.effort}` : ""}`;
-    const acc = byTier.get(key) ?? { total: 0, ok: 0, attempts: 0 };
-    acc.total += 1;
-    if (r.status === "success") acc.ok += 1;
-    acc.attempts += r.attempts ?? 1;
-    byTier.set(key, acc);
-  }
+  // §12.9 — prefer the figures awo computed over the FULL history. Recomputing
+  // from the 20 runs shown here would silently answer a different question.
+  const published = project.stats.byTier;
+  const rows =
+    published && published.length > 0
+      ? published.map((t) => ({
+          key: t.key,
+          total: t.runs,
+          ok: t.succeeded,
+          attempts: t.avgAttempts * t.runs,
+        }))
+      : [...runs
+          .reduce((m, r) => {
+            const key = `${r.tier ?? "—"}${r.effort ? ` / ${r.effort}` : ""}`;
+            const acc = m.get(key) ?? { total: 0, ok: 0, attempts: 0 };
+            acc.total += 1;
+            if (r.status === "success") acc.ok += 1;
+            acc.attempts += r.attempts ?? 1;
+            m.set(key, acc);
+            return m;
+          }, new Map<string, { total: number; ok: number; attempts: number }>())
+          .entries()].map(([key, v]) => ({ key, ...v }));
 
   return (
     <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
@@ -104,9 +115,13 @@ export default async function ProjectPage({
                       {t.agent ?? "unassigned"}
                       {t.attempts > 1 ? ` · ×${t.attempts}` : ""}
                     </div>
+                    <div style={{ fontSize: 10, color: "#6f6f68", marginTop: 2 }}>
+                      {t.targets.join(", ") || "no targets"}
+                      {t.lastRunOutcome ? ` · ${t.lastRunOutcome}` : ""}
+                    </div>
                     {t.blockedReason && (
                       <div style={{ fontSize: 10, color: "#c0392b", marginTop: 3 }}>
-                        {t.blockedReason.slice(0, 90)}
+                        {t.blockedReason.slice(0, 120)}
                       </div>
                     )}
                   </div>
@@ -128,9 +143,9 @@ export default async function ProjectPage({
             </tr>
           </thead>
           <tbody>
-            {[...byTier.entries()].map(([k, v]) => (
-              <tr key={k} style={{ borderTop: "1px solid #eee" }}>
-                <td style={cell}>{k}</td>
+            {rows.map((v) => (
+              <tr key={v.key} style={{ borderTop: "1px solid #eee" }}>
+                <td style={cell}>{v.key}</td>
                 <td style={cell}>{v.total}</td>
                 <td style={cell}>{Math.round((v.ok / v.total) * 100)}%</td>
                 <td style={cell}>{(v.attempts / v.total).toFixed(1)}</td>
@@ -139,8 +154,14 @@ export default async function ProjectPage({
           </tbody>
         </table>
         <p style={{ color: "#6f6f68", fontSize: 11, marginTop: 8 }}>
-          A low-tier row with more attempts than a high-tier one is the cheap model costing
-          more than it saved. Judge it here rather than assuming.
+          A lower tier with <strong>more attempts</strong> than a higher one is the cheap
+          model giving back what it saved. Attempts count reruns, so environmental failures
+          inflate them too — read a high number as &ldquo;look at these runs&rdquo;, not as
+          proof about the model.
+          {typeof project.stats.untestedSuccesses === "number" &&
+            project.stats.untestedSuccesses > 0 && (
+              <> {project.stats.untestedSuccesses} success(es) carried no test evidence.</>
+            )}
         </p>
       </Section>
 

@@ -4,6 +4,29 @@ Hosted, read-only dashboard for [`@supanut9/awo`](https://github.com/supanut9/aw
 workspaces. It shows projects that are **not** on your machine — the local
 `awo ui` already covers the one in front of you.
 
+## Deploy to Vercel
+
+```sh
+npx vercel            # first deploy, links the project
+npx vercel --prod
+```
+
+No environment variables are required — viewers connect their own cluster at
+`/connect`. Set `MONGODB_URI` (and optionally `MONGODB_DB`,
+`MONGODB_COLLECTION_PREFIX`) only if you want a deployment dedicated to one cluster.
+
+Two build notes, both already handled in `next.config.mjs`:
+
+- **`experimental.useTypeScriptCli`** — TypeScript 7 is the native rewrite and no
+  longer exposes the compiler API Next's build worker used, so Next must shell out
+  to `tsc`. Without it the production build fails outright. The alternative was
+  pinning back to TypeScript 6.
+- **`turbopack.root`** — pins the root so turbopack stops inferring a parent
+  directory when other lockfiles exist nearby.
+
+Every page is `force-dynamic`: this data changes whenever someone runs
+`awo publish`, and a cached page shows state that has already moved on.
+
 ## How data gets here
 
 The workspace on disk stays canonical (awo `PROJECT_PLAN.md` §3.8). A workspace
@@ -12,9 +35,15 @@ opts in by pushing a **projection**:
 ```sh
 # in the workspace
 echo 'MONGO_URI=mongodb+srv://…' > .workspace/credentials/mongo.env   # gitignored
-awo publish --dry-run    # see what would be sent
-awo publish
+
+awo publish --dry-run    # see what would be sent, without connecting
+awo publish              # manual sync
+awo publish --watch      # auto-sync: pushes on every change, debounced
 ```
+
+`--watch` is a watcher rather than a hook inside the commands, deliberately: nothing
+in `task run` or `task complete` waits on the network, so a dead connection degrades
+the dashboard and never the work.
 
 Four collections, keyed on `workspaceId`: `awo_projects`, `awo_goals`,
 `awo_tasks`, `awo_runs`. Statuses, counts and model/tier/effort travel; prompts
