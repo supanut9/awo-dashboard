@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* Rendered markdown: run records and task bodies. Scoped so it cannot leak into
+   the chrome, and tuned for dense technical prose rather than an article. */
+.prose-awo {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.prose-awo h1,
+.prose-awo h2,
+.prose-awo h3 {
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-neutral-500);
+  margin: 1.1em 0 0.35em;
+}
+.prose-awo h1:first-child,
+.prose-awo h2:first-child {
+  margin-top: 0;
+}
+.prose-awo p { margin: 0.5em 0; }
+.prose-awo ul, .prose-awo ol { margin: 0.5em 0; padding-left: 1.2em; }
+.prose-awo li { margin: 0.15em 0; list-style: disc; }
+.prose-awo ol li { list-style: decimal; }
+.prose-awo code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+.prose-awo pre {
+  overflow-x: auto;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  margin: 0.6em 0;
+}
+.prose-awo pre code { background: none; padding: 0; }
+.prose-awo blockquote {
+  border-left: 2px solid color-mix(in srgb, currentColor 20%, transparent);
+  padding-left: 0.8em;
+  color: var(--color-neutral-500);
+  margin: 0.6em 0;
+}
+.prose-awo table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 0.6em 0; }
+.prose-awo th, .prose-awo td {
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  padding: 4px 8px;
+  text-align: left;
+}
+.prose-awo hr { border: 0; border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent); margin: 1em 0; }

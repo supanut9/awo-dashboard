@@ -1,101 +1,100 @@
 import Link from "next/link";
 import { collectionName, getConnection } from "@/lib/db";
 import type { ProjectDoc } from "@/lib/types";
+import { Crumb, Empty, Page } from "@/lib/ui";
 
-// Every project page reflects what was last published; caching it would show
-// state that has already moved on.
 export const dynamic = "force-dynamic";
-
-async function projects(): Promise<{ rows: ProjectDoc[]; connected: boolean }> {
-  const conn = await getConnection();
-  if (!conn) return { rows: [], connected: false };
-  const rows = await conn.db
-    .collection<ProjectDoc>(collectionName(conn.prefix, "projects"))
-    .find({}, { sort: { updatedAt: -1 } })
-    .toArray();
-  return { rows, connected: true };
-}
 
 export default async function Home() {
   let rows: ProjectDoc[] = [];
   let connected = false;
   let error: string | null = null;
+
   try {
-    ({ rows, connected } = await projects());
+    const conn = await getConnection();
+    connected = Boolean(conn);
+    if (conn) {
+      rows = await conn.db
+        .collection<ProjectDoc>(collectionName(conn.prefix, "projects"))
+        .find({}, { sort: { updatedAt: -1 } })
+        .toArray();
+    }
   } catch (e) {
     error = (e as Error).message;
   }
 
   return (
-    <main style={{ maxWidth: 900, margin: "0 auto", padding: 24 }}>
-      <h1 style={{ fontSize: 18, margin: "0 0 4px" }}>awo dashboard</h1>
-      <p style={{ color: "#6f6f68", fontSize: 13, margin: "0 0 20px" }}>
-        Workspaces that have run <code>awo publish</code>. Read-only — the workspace on
-        disk stays canonical. <a href="/connect">cluster settings</a>
-      </p>
+    <Page>
+      <div className="mb-5 flex items-baseline justify-between">
+        <div>
+          <h1 className="text-base font-semibold">awo dashboard</h1>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            Workspaces that have run <code className="font-mono">awo publish</code>.
+            Read-only — the workspace on disk stays canonical.
+          </p>
+        </div>
+        <Crumb href="/connect">cluster settings →</Crumb>
+      </div>
 
       {error && (
-        <p style={{ color: "#c0392b", fontSize: 13 }}>
+        <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400">
           {error}
         </p>
       )}
 
       {!error && !connected && (
-        <p style={{ fontSize: 13 }}>
-          No cluster connected. <a href="/connect">Connect one</a> — you supply the
-          MongoDB your workspaces publish to.
-        </p>
+        <Empty>
+          No cluster connected.{" "}
+          <Link href="/connect" className="text-indigo-600 dark:text-indigo-400">
+            Connect one
+          </Link>{" "}
+          — you supply the MongoDB your workspaces publish to.
+        </Empty>
       )}
 
       {!error && connected && rows.length === 0 && (
-        <p style={{ color: "#6f6f68", fontSize: 13 }}>
-          Connected, but nothing published yet. In a workspace: put{" "}
-          <code>MONGO_URI</code> in <code>.workspace/credentials/mongo.env</code>, then
-          run <code>awo publish</code>. <a href="/connect">Change cluster</a>
-        </p>
+        <Empty>
+          Connected, but nothing published yet. In a workspace, put{" "}
+          <code className="font-mono">MONGO_URI</code> in{" "}
+          <code className="font-mono">.workspace/credentials/mongo.env</code> and run{" "}
+          <code className="font-mono">awo publish</code>.
+        </Empty>
       )}
 
-      <div style={{ display: "grid", gap: 10 }}>
+      <div className="grid gap-2.5">
         {rows.map((p) => {
           const pct = p.stats.successRate === null ? "—" : `${Math.round(p.stats.successRate * 100)}%`;
+          const blocked = p.stats.byStatus.blocked ?? 0;
           return (
             <Link
               key={p.workspaceId}
               href={`/p/${p.workspaceId}`}
-              style={{
-                display: "block",
-                border: "1px solid #e4e4e1",
-                borderRadius: 8,
-                background: "#fff",
-                padding: "12px 14px",
-                textDecoration: "none",
-                color: "inherit",
-              }}
+              className="block rounded-lg border border-neutral-200 bg-white p-3.5 transition hover:border-indigo-400 dark:border-neutral-800 dark:bg-neutral-900"
             >
-              <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                <span
-                  style={{
-                    background: "#3b5bdb",
-                    color: "#fff",
-                    borderRadius: 5,
-                    padding: "2px 6px",
-                    font: "600 11px ui-monospace, Menlo, monospace",
-                  }}
-                >
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span className="rounded bg-indigo-600 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-white">
                   {p.projectKey}
                 </span>
-                <strong style={{ fontSize: 14 }}>{p.projectName}</strong>
-                <span style={{ color: "#6f6f68", fontSize: 12 }}>awo {p.libraryVersion}</span>
+                <strong className="text-sm">{p.projectName}</strong>
+                <span className="text-xs text-neutral-500">awo {p.libraryVersion}</span>
+                <span className="ml-auto text-[11px] text-neutral-500">
+                  synced {new Date(p.updatedAt).toLocaleString()}
+                </span>
               </div>
-              <div style={{ color: "#6f6f68", fontSize: 12, marginTop: 6 }}>
-                {p.stats.totalTasks} tasks · {p.stats.byStatus.done ?? 0} done ·{" "}
-                {p.stats.byStatus.blocked ?? 0} blocked · {p.stats.totalRuns} runs · {pct} success ·{" "}
-                {p.repos.length} repos
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+                <span>{p.stats.totalTasks} tasks</span>
+                <span>{p.stats.byStatus.done ?? 0} done</span>
+                {blocked > 0 && (
+                  <span className="text-red-600 dark:text-red-400">{blocked} blocked</span>
+                )}
+                <span>{p.stats.totalRuns} runs</span>
+                <span>{pct} success</span>
+                <span>{p.repos.length} repos</span>
               </div>
             </Link>
           );
         })}
       </div>
-    </main>
+    </Page>
   );
 }

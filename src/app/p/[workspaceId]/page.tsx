@@ -1,20 +1,12 @@
 import Link from "next/link";
 import { collectionName, getConnection } from "@/lib/db";
 import type { GoalDoc, ProjectDoc, RunDoc, TaskDoc } from "@/lib/types";
+import { Crumb, Empty, OUTCOME_TEXT, Page, Section, Stat, STATUS_STYLE } from "@/lib/ui";
+import { Markdown } from "@/lib/markdown";
 
 export const dynamic = "force-dynamic";
 
 const STATUSES = ["todo", "queued", "running", "blocked", "in-review", "done", "cancelled"];
-
-const ACCENT: Record<string, string> = {
-  todo: "#8a8a82",
-  queued: "#3b82f6",
-  running: "#3b5bdb",
-  blocked: "#c0392b",
-  "in-review": "#b06d00",
-  done: "#2f8f4e",
-  cancelled: "#c8c8c2",
-};
 
 export default async function ProjectPage({
   params,
@@ -25,11 +17,11 @@ export default async function ProjectPage({
   const conn = await getConnection();
   if (!conn) {
     return (
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
-        <p style={{ fontSize: 13 }}>
-          No cluster connected. <a href="/connect">Connect one</a>.
-        </p>
-      </main>
+      <Page>
+        <Empty>
+          No cluster connected. <Link href="/connect">Connect one</Link>.
+        </Empty>
+      </Page>
     );
   }
   const c = (n: string): string => collectionName(conn.prefix, n);
@@ -40,162 +32,190 @@ export default async function ProjectPage({
     conn.db.collection<TaskDoc>(c("tasks")).find({ workspaceId }).toArray(),
     conn.db
       .collection<RunDoc>(c("runs"))
-      .find({ workspaceId }, { sort: { runId: -1 }, limit: 20 })
+      .find({ workspaceId }, { sort: { runId: -1 }, limit: 8 })
       .toArray(),
   ]);
 
   if (!project) {
     return (
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
-        <Link href="/">← all projects</Link>
-        <p style={{ color: "#6f6f68" }}>No published workspace with that id.</p>
-      </main>
+      <Page>
+        <Crumb href="/">← all projects</Crumb>
+        <Empty>No published workspace with that id.</Empty>
+      </Page>
     );
   }
 
-  // §12.9 — prefer the figures awo computed over the FULL history. Recomputing
-  // from the 20 runs shown here would silently answer a different question.
-  const published = project.stats.byTier;
-  const rows =
-    published && published.length > 0
-      ? published.map((t) => ({
-          key: t.key,
-          total: t.runs,
-          ok: t.succeeded,
-          attempts: t.avgAttempts * t.runs,
-        }))
-      : [...runs
-          .reduce((m, r) => {
-            const key = `${r.tier ?? "—"}${r.effort ? ` / ${r.effort}` : ""}`;
-            const acc = m.get(key) ?? { total: 0, ok: 0, attempts: 0 };
-            acc.total += 1;
-            if (r.status === "success") acc.ok += 1;
-            acc.attempts += r.attempts ?? 1;
-            m.set(key, acc);
-            return m;
-          }, new Map<string, { total: number; ok: number; attempts: number }>())
-          .entries()].map(([key, v]) => ({ key, ...v }));
+  const s = project.stats;
+  const pct = s.successRate === null ? "—" : `${Math.round(s.successRate * 100)}%`;
+  // §12.9 — prefer the figures awo computed over the FULL history; recomputing from
+  // the runs shown here would silently answer a different question.
+  const tiers = s.byTier ?? [];
 
   return (
-    <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
-      <Link href="/" style={{ fontSize: 12, color: "#6f6f68" }}>
-        ← all projects
-      </Link>
-      <h1 style={{ fontSize: 18, margin: "8px 0 2px" }}>
-        {project.projectKey} · {project.projectName}
-      </h1>
-      <p style={{ color: "#6f6f68", fontSize: 12, margin: "0 0 18px" }}>
-        awo {project.libraryVersion} · published {new Date(project.updatedAt).toLocaleString()}
-      </p>
+    <Page>
+      <Crumb href="/">← all projects</Crumb>
+      <div className="mb-4 mt-1.5 flex flex-wrap items-baseline gap-2">
+        <span className="rounded bg-indigo-600 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-white">
+          {project.projectKey}
+        </span>
+        <h1 className="text-base font-semibold">{project.projectName}</h1>
+        <span className="text-xs text-neutral-500">awo {project.libraryVersion}</span>
+        <span className="ml-auto text-[11px] text-neutral-500">
+          synced {new Date(project.updatedAt).toLocaleString()}
+        </span>
+      </div>
 
-      <Section title="Board">
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${STATUSES.length}, 1fr)`, gap: 8, minWidth: 900 }}>
-          {STATUSES.map((s) => {
-            const inCol = tasks.filter((t) => t.status === s);
-            return (
-              <div key={s}>
-                <div style={{ fontSize: 11, textTransform: "uppercase", color: "#6f6f68", marginBottom: 6 }}>
-                  {s} {inCol.length || ""}
-                </div>
-                {inCol.map((t) => (
-                  <Link
-                    key={t.taskId}
-                    href={`/p/${workspaceId}/t/${t.taskId}`}
-                    style={{
-                      display: "block",
-                      textDecoration: "none",
-                      color: "inherit",
-                      border: "1px solid #e4e4e1",
-                      borderLeft: `3px solid ${ACCENT[t.status] ?? "#8a8a82"}`,
-                      borderRadius: 6,
-                      background: "#fff",
-                      padding: 8,
-                      marginBottom: 6,
-                    }}
-                  >
-                    <div style={{ font: "600 11px ui-monospace, Menlo, monospace" }}>{t.taskId}</div>
-                    <div style={{ fontSize: 11, marginTop: 2 }}>{t.name}</div>
-                    <div style={{ fontSize: 10, color: "#6f6f68", marginTop: 4 }}>
-                      {t.agent ?? "unassigned"}
-                      {t.attempts > 1 ? ` · ×${t.attempts}` : ""}
+      <div className="mb-4 flex flex-wrap overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+        <Stat label="Tasks" value={s.totalTasks} />
+        <Stat label="Done" value={s.byStatus.done ?? 0} />
+        <Stat label="Blocked" value={s.byStatus.blocked ?? 0} warn={(s.byStatus.blocked ?? 0) > 0} />
+        <Stat label="Runs" value={s.totalRuns} />
+        <Stat label="Success" value={pct} />
+        <Stat label="Avg run" value={s.avgDurationSec === null ? "—" : `${s.avgDurationSec}s`} />
+        <Stat
+          label="Untested"
+          value={s.untestedSuccesses ?? "—"}
+          warn={(s.untestedSuccesses ?? 0) > 0}
+        />
+      </div>
+
+      <Section title="Board" pad={false}>
+        {tasks.length === 0 ? (
+          <Empty>No tasks published.</Empty>
+        ) : (
+          <div className="overflow-x-auto p-3.5">
+            <div className="grid min-w-[1050px] grid-cols-7 gap-2.5">
+              {STATUSES.map((status) => {
+                const inCol = tasks.filter((t) => t.status === status);
+                return (
+                  <div key={status}>
+                    <div className="mb-1.5 flex justify-between px-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+                      <span>{status}</span>
+                      <span>{inCol.length || ""}</span>
                     </div>
-                    <div style={{ fontSize: 10, color: "#6f6f68", marginTop: 2 }}>
-                      {t.targets.join(", ") || "no targets"}
-                      {t.lastRunOutcome ? ` · ${t.lastRunOutcome}` : ""}
-                    </div>
-                    {t.blockedReason && (
-                      <div style={{ fontSize: 10, color: "#c0392b", marginTop: 3 }}>
-                        {t.blockedReason.slice(0, 120)}
-                      </div>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            );
-          })}
-        </div>
+                    {inCol.map((t) => (
+                      <Link
+                        key={t.taskId}
+                        href={`/p/${workspaceId}/t/${t.taskId}`}
+                        className={`mb-2 block rounded-md border border-l-3 border-neutral-200 bg-neutral-50 p-2.5 transition hover:border-indigo-400 dark:border-neutral-800 dark:bg-neutral-950 ${STATUS_STYLE[t.status] ?? ""}`}
+                      >
+                        <div className="font-mono text-[11px] font-semibold">{t.taskId}</div>
+                        <div className="mt-0.5 text-[11px] leading-snug">{t.name}</div>
+                        <div className="mt-1.5 text-[10px] text-neutral-500">
+                          {t.agent ?? "unassigned"}
+                          {t.attempts > 1 ? ` · ×${t.attempts}` : ""}
+                          {t.lastRunOutcome ? (
+                            <span className={OUTCOME_TEXT[t.lastRunOutcome] ?? ""}>
+                              {" · "}
+                              {t.lastRunOutcome}
+                            </span>
+                          ) : null}
+                        </div>
+                        {t.blockedReason && (
+                          <div className="mt-1 line-clamp-3 text-[10px] text-red-600 dark:text-red-400">
+                            {t.blockedReason}
+                          </div>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </Section>
 
-      <Section title="Does the tier distinction pay for itself?">
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
-          <thead>
-            <tr style={{ textAlign: "left", color: "#6f6f68", fontSize: 11 }}>
-              <th style={cell}>tier / effort</th>
-              <th style={cell}>runs</th>
-              <th style={cell}>success</th>
-              <th style={cell}>avg attempts</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((v) => (
-              <tr key={v.key} style={{ borderTop: "1px solid #eee" }}>
-                <td style={cell}>{v.key}</td>
-                <td style={cell}>{v.total}</td>
-                <td style={cell}>{Math.round((v.ok / v.total) * 100)}%</td>
-                <td style={cell}>{(v.attempts / v.total).toFixed(1)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <p style={{ color: "#6f6f68", fontSize: 11, marginTop: 8 }}>
-          A lower tier with <strong>more attempts</strong> than a higher one is the cheap
-          model giving back what it saved. Attempts count reruns, so environmental failures
-          inflate them too — read a high number as &ldquo;look at these runs&rdquo;, not as
-          proof about the model.
-          {typeof project.stats.untestedSuccesses === "number" &&
-            project.stats.untestedSuccesses > 0 && (
-              <> {project.stats.untestedSuccesses} success(es) carried no test evidence.</>
-            )}
-        </p>
+      <Section
+        title="Does the tier distinction pay for itself?"
+        pad={false}
+        right={
+          <Crumb href={`/p/${workspaceId}/runs`}>all runs →</Crumb>
+        }
+      >
+        {tiers.length === 0 ? (
+          <Empty>No finished runs with a recorded tier yet.</Empty>
+        ) : (
+          <>
+            <table className="w-full text-xs">
+              <thead className="text-[10px] uppercase tracking-wide text-neutral-500">
+                <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                  <th className="px-4 py-2 text-left">tier / effort</th>
+                  <th className="px-4 py-2 text-right">runs</th>
+                  <th className="px-4 py-2 text-right">success</th>
+                  <th className="px-4 py-2 text-right">avg attempts</th>
+                  <th className="px-4 py-2 text-right">avg</th>
+                  <th className="px-4 py-2 text-right">total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tiers.map((t) => (
+                  <tr
+                    key={t.key}
+                    className="border-b border-neutral-100 last:border-0 dark:border-neutral-800/60"
+                  >
+                    <td className="px-4 py-2 font-mono">{t.key}</td>
+                    <td className="px-4 py-2 text-right">{t.runs}</td>
+                    <td
+                      className={`px-4 py-2 text-right ${t.successRate < 0.7 ? "text-red-600 dark:text-red-400" : ""}`}
+                    >
+                      {Math.round(t.successRate * 100)}%
+                    </td>
+                    <td
+                      className={`px-4 py-2 text-right ${t.avgAttempts > 1.5 ? "text-amber-600 dark:text-amber-400" : ""}`}
+                    >
+                      {t.avgAttempts.toFixed(1)}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {t.avgDurationSec === null ? "—" : `${t.avgDurationSec}s`}
+                    </td>
+                    <td className="px-4 py-2 text-right">{t.totalDurationSec}s</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="border-t border-neutral-200 px-4 py-3 text-[11px] leading-relaxed text-neutral-500 dark:border-neutral-800">
+              A lower tier with <strong>more attempts</strong> than a higher one is the cheap
+              model giving back what it saved. Attempts count reruns, so environmental
+              failures inflate them too — read a high number as &ldquo;look at these
+              runs&rdquo;, not as proof about the model.
+            </p>
+          </>
+        )}
       </Section>
 
       <Section title="Goals">
+        {goals.length === 0 && <p className="text-xs text-neutral-500">None published.</p>}
         {goals.map((g) => {
           const own = tasks.filter((t) => t.goalId === g.goalId);
           return (
-            <div key={g.goalId} style={{ padding: "6px 0", borderTop: "1px solid #eee" }}>
-              <div style={{ fontSize: 12.5 }}>
-                <code>{g.goalId}</code> <strong>{g.status}</strong> —{" "}
+            <div
+              key={g.goalId}
+              className="border-t border-neutral-100 py-2.5 first:border-0 first:pt-0 dark:border-neutral-800/60"
+            >
+              <div className="text-xs">
+                <code className="font-mono font-semibold">{g.goalId}</code>{" "}
+                <span className="text-neutral-500">{g.status}</span> —{" "}
                 {own.filter((t) => t.status === "done").length}/{own.length} done · {g.title}
               </div>
               {g.body && (
-                <details style={{ marginTop: 6 }}>
-                  <summary style={{ cursor: "pointer", fontSize: 12, color: "#3b5bdb" }}>
+                <details className="mt-1.5">
+                  <summary className="cursor-pointer text-[11px] text-indigo-600 dark:text-indigo-400">
                     definition of done
                   </summary>
-                  <pre style={{ margin: "6px 0 0", whiteSpace: "pre-wrap", fontSize: 12, lineHeight: 1.55, fontFamily: "ui-monospace, Menlo, monospace" }}>
-                    {g.body}
-                  </pre>
+                  <div className="mt-2 rounded border border-neutral-200 p-3 dark:border-neutral-800">
+                    <Markdown source={g.body} />
+                  </div>
                 </details>
               )}
               {g.requirementBody && (
-                <details style={{ marginTop: 4 }}>
-                  <summary style={{ cursor: "pointer", fontSize: 12, color: "#3b5bdb" }}>
+                <details className="mt-1">
+                  <summary className="cursor-pointer text-[11px] text-indigo-600 dark:text-indigo-400">
                     requirement it came from
                   </summary>
-                  <pre style={{ margin: "6px 0 0", whiteSpace: "pre-wrap", fontSize: 12, lineHeight: 1.55, fontFamily: "ui-monospace, Menlo, monospace" }}>
-                    {g.requirementBody}
-                  </pre>
+                  <div className="mt-2 rounded border border-neutral-200 p-3 dark:border-neutral-800">
+                    <Markdown source={g.requirementBody} />
+                  </div>
                 </details>
               )}
             </div>
@@ -203,53 +223,44 @@ export default async function ProjectPage({
         })}
       </Section>
 
-      <Section title="Recent runs">
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-          <tbody>
-            {runs.map((r) => (
-              <tr key={r.runId} style={{ borderTop: "1px solid #eee" }}>
-                <td style={{ ...cell, fontFamily: "ui-monospace, Menlo, monospace" }}>
-                  {r.taskId ? (
-                    <Link href={`/p/${workspaceId}/t/${r.taskId}`}>{r.taskId}</Link>
-                  ) : (
-                    (r.agent ?? "adhoc")
-                  )}
-                </td>
-                <td style={{ ...cell, color: r.status === "success" ? "#2f8f4e" : "#c0392b" }}>{r.status}</td>
-                <td style={cell}>{r.model ?? "—"}</td>
-                <td style={cell}>{r.effort ? `effort=${r.effort}` : "—"}</td>
-                <td style={cell}>{r.durationSec === null ? "—" : `${r.durationSec}s`}</td>
-                <td style={{ ...cell, color: "#6f6f68" }}>{r.reposChanged.join(", ") || "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Section>
-    </main>
-  );
-}
-
-const cell = { padding: "5px 8px" } as const;
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section
-      style={{ border: "1px solid #e4e4e1", borderRadius: 8, background: "#fff", marginBottom: 18 }}
-    >
-      <h2
-        style={{
-          margin: 0,
-          padding: "10px 14px",
-          fontSize: 11,
-          textTransform: "uppercase",
-          letterSpacing: ".04em",
-          color: "#6f6f68",
-          borderBottom: "1px solid #e4e4e1",
-        }}
+      <Section
+        title="Recent runs"
+        pad={false}
+        right={<Crumb href={`/p/${workspaceId}/runs`}>all {s.totalRuns} runs →</Crumb>}
       >
-        {title}
-      </h2>
-      <div style={{ padding: 14, overflowX: "auto" }}>{children}</div>
-    </section>
+        {runs.length === 0 ? (
+          <Empty>No runs published.</Empty>
+        ) : (
+          <table className="w-full text-xs">
+            <tbody>
+              {runs.map((r) => (
+                <tr
+                  key={r.runId}
+                  className="border-b border-neutral-100 last:border-0 dark:border-neutral-800/60"
+                >
+                  <td className="px-4 py-2">
+                    <Link
+                      href={`/p/${workspaceId}/runs/${encodeURIComponent(r.runId)}`}
+                      className="font-mono text-indigo-600 dark:text-indigo-400"
+                    >
+                      {r.taskId ?? r.agent ?? "adhoc"}
+                    </Link>
+                  </td>
+                  <td className={`px-4 py-2 ${OUTCOME_TEXT[r.status] ?? ""}`}>{r.status}</td>
+                  <td className="px-4 py-2 text-neutral-500">
+                    {r.tier ?? "—"}
+                    {r.effort ? ` / ${r.effort}` : ""}
+                  </td>
+                  <td className="px-4 py-2 text-neutral-500">{r.model ?? "—"}</td>
+                  <td className="px-4 py-2 text-right text-neutral-500">
+                    {r.durationSec === null ? "—" : `${r.durationSec}s`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+    </Page>
   );
 }
