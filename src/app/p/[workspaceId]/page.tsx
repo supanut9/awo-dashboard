@@ -98,9 +98,13 @@ export default async function ProjectPage({
                   {s} {inCol.length || ""}
                 </div>
                 {inCol.map((t) => (
-                  <div
+                  <Link
                     key={t.taskId}
+                    href={`/p/${workspaceId}/t/${t.taskId}`}
                     style={{
+                      display: "block",
+                      textDecoration: "none",
+                      color: "inherit",
                       border: "1px solid #e4e4e1",
                       borderLeft: `3px solid ${ACCENT[t.status] ?? "#8a8a82"}`,
                       borderRadius: 6,
@@ -124,7 +128,7 @@ export default async function ProjectPage({
                         {t.blockedReason.slice(0, 120)}
                       </div>
                     )}
-                  </div>
+                  </Link>
                 ))}
               </div>
             );
@@ -169,9 +173,31 @@ export default async function ProjectPage({
         {goals.map((g) => {
           const own = tasks.filter((t) => t.goalId === g.goalId);
           return (
-            <div key={g.goalId} style={{ fontSize: 12.5, padding: "6px 0", borderTop: "1px solid #eee" }}>
-              <code>{g.goalId}</code> <strong>{g.status}</strong> —{" "}
-              {own.filter((t) => t.status === "done").length}/{own.length} done · {g.title}
+            <div key={g.goalId} style={{ padding: "6px 0", borderTop: "1px solid #eee" }}>
+              <div style={{ fontSize: 12.5 }}>
+                <code>{g.goalId}</code> <strong>{g.status}</strong> —{" "}
+                {own.filter((t) => t.status === "done").length}/{own.length} done · {g.title}
+              </div>
+              {g.body && (
+                <details style={{ marginTop: 6 }}>
+                  <summary style={{ cursor: "pointer", fontSize: 12, color: "#3b5bdb" }}>
+                    definition of done
+                  </summary>
+                  <pre style={{ margin: "6px 0 0", whiteSpace: "pre-wrap", fontSize: 12, lineHeight: 1.55, fontFamily: "ui-monospace, Menlo, monospace" }}>
+                    {g.body}
+                  </pre>
+                </details>
+              )}
+              {g.requirementBody && (
+                <details style={{ marginTop: 4 }}>
+                  <summary style={{ cursor: "pointer", fontSize: 12, color: "#3b5bdb" }}>
+                    requirement it came from
+                  </summary>
+                  <pre style={{ margin: "6px 0 0", whiteSpace: "pre-wrap", fontSize: 12, lineHeight: 1.55, fontFamily: "ui-monospace, Menlo, monospace" }}>
+                    {g.requirementBody}
+                  </pre>
+                </details>
+              )}
             </div>
           );
         })}
@@ -183,7 +209,11 @@ export default async function ProjectPage({
             {runs.map((r) => (
               <tr key={r.runId} style={{ borderTop: "1px solid #eee" }}>
                 <td style={{ ...cell, fontFamily: "ui-monospace, Menlo, monospace" }}>
-                  {r.taskId ?? r.agent ?? "adhoc"}
+                  {r.taskId ? (
+                    <Link href={`/p/${workspaceId}/t/${r.taskId}`}>{r.taskId}</Link>
+                  ) : (
+                    (r.agent ?? "adhoc")
+                  )}
                 </td>
                 <td style={{ ...cell, color: r.status === "success" ? "#2f8f4e" : "#c0392b" }}>{r.status}</td>
                 <td style={cell}>{r.model ?? "—"}</td>

@@ -45,9 +45,27 @@ awo publish --watch      # auto-sync: pushes on every change, debounced
 in `task run` or `task complete` waits on the network, so a dead connection degrades
 the dashboard and never the work.
 
-Four collections, keyed on `workspaceId`: `awo_projects`, `awo_goals`,
-`awo_tasks`, `awo_runs`. Statuses, counts and model/tier/effort travel; prompts
-and file paths do not.
+Five collections, keyed on `workspaceId`: `awo_projects`, `awo_goals`, `awo_tasks`,
+`awo_runs`, `awo_events`. Nothing needs creating by hand — MongoDB makes the
+collections on first write, and `awo publish` creates the indexes idempotently every
+time.
+
+**How much travels is a choice.** By default (`detail: "summary"`) only statuses,
+counts and model/tier/effort go, and nothing describing the work leaves the machine.
+Set it in the workspace manifest to send the rest:
+
+```jsonc
+// .workspace/manifest.json
+"publish": {
+  "detail": "full",                                  // + bodies, run records, event streams
+  "redact": { "prompts": false, "filePaths": false } // include the verbatim prompts too
+}
+```
+
+With `full`, the dashboard shows what the local `awo ui` shows: each task's
+objective and steps, the goal's definition-of-done and the requirement behind it,
+and every run's event stream and markdown record. That prose describes your code and
+your prompts, which is exactly why it is opt-in.
 
 Nothing here writes. A hosted copy that could be edited would immediately become a
 second source of truth.
@@ -86,6 +104,8 @@ Be clear-eyed about this, because the repo is public and anyone may deploy it:
 - every published workspace, newest first
 - per project: the board across the seven lifecycle states, goals with progress,
   and the last 20 runs
+- click any card for a **task detail** page: definition, state, dependencies, and the
+  last run's event stream and record (needs `detail: "full"`)
 - **tier/effort against outcomes** — success rate and average attempts per
   `tier / effort`. A low-tier row with more attempts than a high-tier one is the
   cheap model costing more than it saved; the point is to judge that from data

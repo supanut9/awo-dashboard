@@ -39,6 +39,9 @@ export interface GoalDoc {
   title: string;
   status: string;
   taskIds: string[];
+  /** Only present when the workspace publishes with detail: "full". */
+  body?: string;
+  requirementBody?: string;
 }
 
 export interface TaskDoc {
@@ -52,6 +55,20 @@ export interface TaskDoc {
   lastRunOutcome: string | null;
   attempts: number;
   blockedReason: string | null;
+  lastRunId?: string | null;
+  /** detail: "full" only — the task's objective/steps/done-when. */
+  body?: string;
+  dependsOn?: string[];
+  file?: string;
+}
+
+/** detail: "full" only — one per run: its event stream and markdown record. */
+export interface EventsDoc {
+  workspaceId: string;
+  runId: string;
+  taskId: string | null;
+  events: { t: string; kind: string; [k: string]: unknown }[];
+  markdown: string;
 }
 
 export interface RunDoc {
