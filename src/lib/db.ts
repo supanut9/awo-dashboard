@@ -1,34 +1,71 @@
+import { cookies } from "next/headers";
 import { MongoClient, type Db } from "mongodb";
 
 /**
- * The dashboard is a READER. It implements the same shape as awo's local
- * `WorkspaceReader` (§7.5) over the projection that `awo publish` writes, so the
- * views can be shared with the CLI's dashboard rather than written twice.
+ * The dashboard is a READER over the projection `awo publish` writes. It never
+ * writes: the workspace on disk is canonical (awo §3.8), and a hosted copy that
+ * could be edited would immediately become a second source of truth.
  *
- * It never writes: the workspace on disk is canonical (§3.8), and a hosted copy
- * that could be edited would immediately become a second source of truth.
+ * Where the connection string comes from — two sources, in this order:
+ *
+ *  1. a cookie the viewer set through /connect (bring-your-own cluster)
+ *  2. MONGODB_URI in the environment (a deployment dedicated to one cluster)
+ *
+ * The cookie is httpOnly, so page JavaScript cannot read it back, and it is never
+ * persisted server-side: this deployment stores nobody's credentials. It is still a
+ * credential travelling to a server you may not control — see the warning on
+ * /connect and in the README.
  */
-const uri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DB ?? "awo";
-const prefix = process.env.MONGODB_COLLECTION_PREFIX ?? "awo_";
+export const COOKIE = "awo_mongo";
 
-let client: MongoClient | null = null;
+const clients = new Map<string, MongoClient>();
 
-export function collection(name: string): string {
-  return `${prefix}${name}`;
+export interface Connection {
+  db: Db;
+  prefix: string;
+  source: "cookie" | "env";
 }
 
-export async function db(): Promise<Db> {
-  if (!uri) {
-    throw new Error(
-      "MONGODB_URI is not set. Copy .env.example to .env.local and point it at the cluster `awo publish` writes to."
-    );
-  }
-  // Reused across requests: Next hot-reloads modules in dev, and a new client per
-  // request exhausts the connection pool quickly.
+function parse(raw: string): { uri: string; dbName: string; prefix: string } {
+  const [uri, dbName = "awo", prefix = "awo_"] = raw.split("|");
+  return { uri, dbName, prefix };
+}
+
+/** Validated before use: a typo should be a message, not a stack trace. */
+export function looksLikeMongoUri(uri: string): boolean {
+  return /^mongodb(\+srv)?:\/\/.+/.test(uri.trim());
+}
+
+export async function getConnection(): Promise<Connection | null> {
+  const jar = await cookies();
+  const fromCookie = jar.get(COOKIE)?.value;
+  const raw =
+    fromCookie ??
+    (process.env.MONGODB_URI
+      ? [
+          process.env.MONGODB_URI,
+          process.env.MONGODB_DB ?? "awo",
+          process.env.MONGODB_COLLECTION_PREFIX ?? "awo_",
+        ].join("|")
+      : undefined);
+
+  if (!raw) return null;
+
+  const { uri, dbName, prefix } = parse(raw);
+  if (!looksLikeMongoUri(uri)) return null;
+
+  // One client per distinct URI. A client per request exhausts the pool under
+  // Next's dev reloading, and per-viewer connections need reuse even more.
+  let client = clients.get(raw);
   if (!client) {
     client = new MongoClient(uri, { serverSelectionTimeoutMS: 8000 });
     await client.connect();
+    clients.set(raw, client);
   }
-  return client.db(dbName);
+
+  return { db: client.db(dbName), prefix, source: fromCookie ? "cookie" : "env" };
+}
+
+export function collectionName(prefix: string, name: string): string {
+  return `${prefix}${name}`;
 }

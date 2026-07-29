@@ -27,9 +27,30 @@ second source of truth.
 
 ```sh
 npm install
-cp .env.example .env.local     # point MONGODB_URI at the same cluster
 npm run dev
 ```
+
+Then open `/connect` and paste the connection string. **You** supply the cluster —
+this deployment ships with none, and reads nothing until you connect one. A single
+deployment can therefore serve different people looking at different clusters.
+
+Optionally set `MONGODB_URI` (plus `MONGODB_DB`, `MONGODB_COLLECTION_PREFIX`) to
+dedicate a deployment to one cluster; the cookie takes precedence when both exist.
+
+### About handing a connection string to a website
+
+Be clear-eyed about this, because the repo is public and anyone may deploy it:
+
+- the string is **sent to whatever server hosts the page** and held in memory there
+  to open the connection
+- it is kept in an **httpOnly** cookie (page JavaScript cannot read it back),
+  `sameSite=lax`, `secure` in production, and is **not written to any database here**
+- that still means trusting the host with a credential. Use a **read-only user
+  scoped to the one database** — never an admin URI
+- a public deployment lets any visitor make that server connect to an arbitrary
+  MongoDB host. If you deploy this publicly, put it behind auth or accept that
+
+`Disconnect and forget` on `/connect` clears the cookie.
 
 ## What it shows
 
@@ -43,5 +64,6 @@ npm run dev
 
 ## Not built yet
 
-Authentication and multi-tenancy. Right now anyone who can reach the deployment
-sees every workspace in the database, so keep it private until that exists.
+**Authentication.** Whoever connects a cluster sees every workspace in it — which is
+fine when that is your own cluster, and not fine on a shared deployment. There is no
+login, no per-user scoping, and no rate limiting on outbound connections.

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { collection, db } from "@/lib/db";
+import { collectionName, getConnection } from "@/lib/db";
 import type { GoalDoc, ProjectDoc, RunDoc, TaskDoc } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -22,14 +22,24 @@ export default async function ProjectPage({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  const database = await db();
+  const conn = await getConnection();
+  if (!conn) {
+    return (
+      <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
+        <p style={{ fontSize: 13 }}>
+          No cluster connected. <a href="/connect">Connect one</a>.
+        </p>
+      </main>
+    );
+  }
+  const c = (n: string): string => collectionName(conn.prefix, n);
 
   const [project, goals, tasks, runs] = await Promise.all([
-    database.collection<ProjectDoc>(collection("projects")).findOne({ workspaceId }),
-    database.collection<GoalDoc>(collection("goals")).find({ workspaceId }).toArray(),
-    database.collection<TaskDoc>(collection("tasks")).find({ workspaceId }).toArray(),
-    database
-      .collection<RunDoc>(collection("runs"))
+    conn.db.collection<ProjectDoc>(c("projects")).findOne({ workspaceId }),
+    conn.db.collection<GoalDoc>(c("goals")).find({ workspaceId }).toArray(),
+    conn.db.collection<TaskDoc>(c("tasks")).find({ workspaceId }).toArray(),
+    conn.db
+      .collection<RunDoc>(c("runs"))
       .find({ workspaceId }, { sort: { runId: -1 }, limit: 20 })
       .toArray(),
   ]);

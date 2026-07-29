@@ -11,6 +11,7 @@
     "skipLibCheck": true,
     "incremental": true,
     "resolveJsonModule": true,
+    "types": ["node"],
     "isolatedModules": true,
     "plugins": [{ "name": "next" }],
     "paths": { "@/*": ["./src/*"] }

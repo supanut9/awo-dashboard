@@ -1,24 +1,27 @@
 import Link from "next/link";
-import { collection, db } from "@/lib/db";
+import { collectionName, getConnection } from "@/lib/db";
 import type { ProjectDoc } from "@/lib/types";
 
 // Every project page reflects what was last published; caching it would show
 // state that has already moved on.
 export const dynamic = "force-dynamic";
 
-async function projects(): Promise<ProjectDoc[]> {
-  const database = await db();
-  return database
-    .collection<ProjectDoc>(collection("projects"))
+async function projects(): Promise<{ rows: ProjectDoc[]; connected: boolean }> {
+  const conn = await getConnection();
+  if (!conn) return { rows: [], connected: false };
+  const rows = await conn.db
+    .collection<ProjectDoc>(collectionName(conn.prefix, "projects"))
     .find({}, { sort: { updatedAt: -1 } })
     .toArray();
+  return { rows, connected: true };
 }
 
 export default async function Home() {
   let rows: ProjectDoc[] = [];
+  let connected = false;
   let error: string | null = null;
   try {
-    rows = await projects();
+    ({ rows, connected } = await projects());
   } catch (e) {
     error = (e as Error).message;
   }
@@ -28,7 +31,7 @@ export default async function Home() {
       <h1 style={{ fontSize: 18, margin: "0 0 4px" }}>awo dashboard</h1>
       <p style={{ color: "#6f6f68", fontSize: 13, margin: "0 0 20px" }}>
         Workspaces that have run <code>awo publish</code>. Read-only — the workspace on
-        disk stays canonical.
+        disk stays canonical. <a href="/connect">cluster settings</a>
       </p>
 
       {error && (
@@ -37,10 +40,18 @@ export default async function Home() {
         </p>
       )}
 
-      {!error && rows.length === 0 && (
+      {!error && !connected && (
+        <p style={{ fontSize: 13 }}>
+          No cluster connected. <a href="/connect">Connect one</a> — you supply the
+          MongoDB your workspaces publish to.
+        </p>
+      )}
+
+      {!error && connected && rows.length === 0 && (
         <p style={{ color: "#6f6f68", fontSize: 13 }}>
-          Nothing published yet. In a workspace: add <code>MONGO_URI</code> to{" "}
-          <code>.workspace/credentials/mongo.env</code>, then run <code>awo publish</code>.
+          Connected, but nothing published yet. In a workspace: put{" "}
+          <code>MONGO_URI</code> in <code>.workspace/credentials/mongo.env</code>, then
+          run <code>awo publish</code>. <a href="/connect">Change cluster</a>
         </p>
       )}
 
