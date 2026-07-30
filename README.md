@@ -72,13 +72,9 @@ second source of truth.
 ## Run it
 
 ```sh
-bun install
-bun run dev
+npm install
+npm run dev
 ```
-
-Bun owns dependency installation and script execution. Next.js currently runs under
-Node: Bun 1.2 does not yet implement the worker options Next's build pool uses, so
-forcing the app runtime through Bun produces unsupported-runtime errors.
 
 Then open `/connect` and paste the connection string. **You** supply the cluster —
 this deployment ships with none, and reads nothing until you connect one. A single

@@ -3,10 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "description": "Hosted dashboard for awo workspaces — reads projections published by `awo publish`.",
-  "packageManager": "bun@1.2.2",
-  "engines": {
-    "bun": ">=1.2.2"
-  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
