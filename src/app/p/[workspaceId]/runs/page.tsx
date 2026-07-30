@@ -114,6 +114,7 @@ export default async function RunsPage({
                   <th className="px-4 py-2 text-right">try</th>
                   <th className="px-4 py-2 text-right">took</th>
                   <th className="px-4 py-2 text-left">repos</th>
+                  <th className="px-4 py-2 text-right">log</th>
                 </tr>
               </thead>
               <tbody>
@@ -126,12 +127,7 @@ export default async function RunsPage({
                       {new Date(r.startedAt).toLocaleString()}
                     </td>
                     <td className="px-4 py-2">
-                      <Link
-                        href={`/p/${workspaceId}/runs/${encodeURIComponent(r.runId)}`}
-                        className="font-mono text-indigo-600 dark:text-indigo-400"
-                      >
-                        {r.taskId ?? r.agent ?? "adhoc"}
-                      </Link>
+                      <span className="font-mono">{r.taskId ?? r.agent ?? "adhoc"}</span>
                     </td>
                     <td className={`px-4 py-2 ${OUTCOME_TEXT[r.status] ?? ""}`}>{r.status}</td>
                     <td className="px-4 py-2 text-neutral-500">
@@ -151,6 +147,15 @@ export default async function RunsPage({
                     </td>
                     <td className="px-4 py-2 text-neutral-500">
                       {r.reposChanged.join(", ") || "—"}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <Link
+                        href={`/p/${workspaceId}/runs/${encodeURIComponent(r.runId)}`}
+                        className="inline-flex rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-[11px] font-medium text-indigo-700 transition hover:border-indigo-400 hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-950/70"
+                        aria-label={`View log for ${r.runId}`}
+                      >
+                        View log
+                      </Link>
                     </td>
                   </tr>
                 ))}
