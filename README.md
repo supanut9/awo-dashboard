@@ -44,8 +44,8 @@ awo publish --watch      # auto-sync: pushes on every change, debounced
 in `task run` or `task complete` waits on the network, so a dead connection degrades
 the dashboard and never the work.
 
-Five collections, keyed on `workspaceId`: `awo_projects`, `awo_goals`, `awo_tasks`,
-`awo_runs`, `awo_events`. Nothing needs creating by hand — MongoDB makes the
+Six collections, keyed on `workspaceId`: `awo_projects`, `awo_requirements`,
+`awo_goals`, `awo_tasks`, `awo_runs`, `awo_events`. Nothing needs creating by hand — MongoDB makes the
 collections on first write, and `awo publish` creates the indexes idempotently every
 time.
 
@@ -72,9 +72,13 @@ second source of truth.
 ## Run it
 
 ```sh
-npm install
-npm run dev
+bun install
+bun run dev
 ```
+
+Bun owns dependency installation and script execution. Next.js currently runs under
+Node: Bun 1.2 does not yet implement the worker options Next's build pool uses, so
+forcing the app runtime through Bun produces unsupported-runtime errors.
 
 Then open `/connect` and paste the connection string. **You** supply the cluster —
 this deployment ships with none, and reads nothing until you connect one. A single

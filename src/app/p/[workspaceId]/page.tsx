@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { collectionName, getConnectionResult } from "@/lib/db";
-import type { GoalDoc, ProjectDoc, RunDoc, TaskDoc } from "@/lib/types";
-import { Crumb, Empty, OUTCOME_TEXT, Page, ProjectNav, Section, Stat, STATUS_STYLE, ConnectionProblem } from "@/lib/ui";
+import type { GoalDoc, ProjectDoc, RequirementDoc, RunDoc, TaskDoc } from "@/lib/types";
+import { Crumb, Empty, OUTCOME_TEXT, Page, ProjectNav, REQUIREMENT_STYLE, Section, Stat, STATUS_STYLE, ConnectionProblem } from "@/lib/ui";
 import { Markdown } from "@/lib/markdown";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +25,9 @@ export default async function ProjectPage({
   const conn = result.connection;
   const c = (n: string): string => collectionName(conn.prefix, n);
 
-  const [project, goals, tasks, runs] = await Promise.all([
+  const [project, requirements, goals, tasks, runs] = await Promise.all([
     conn.db.collection<ProjectDoc>(c("projects")).findOne({ workspaceId }),
+    conn.db.collection<RequirementDoc>(c("requirements")).find({ workspaceId }).toArray(),
     conn.db.collection<GoalDoc>(c("goals")).find({ workspaceId }).toArray(),
     conn.db.collection<TaskDoc>(c("tasks")).find({ workspaceId }).toArray(),
     conn.db
@@ -62,6 +63,8 @@ export default async function ProjectPage({
       />
 
       <div className="mb-4 flex flex-wrap overflow-hidden rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+        <Stat label="Requirements" value={requirements.length} />
+        <Stat label="Need approval" value={requirements.filter((r) => r.status === "proposed").length} warn={requirements.some((r) => r.status === "proposed")} />
         <Stat label="Tasks" value={s.totalTasks} />
         <Stat label="Done" value={s.byStatus.done ?? 0} />
         <Stat label="Blocked" value={s.byStatus.blocked ?? 0} warn={(s.byStatus.blocked ?? 0) > 0} />
@@ -74,6 +77,28 @@ export default async function ProjectPage({
           warn={(s.untestedSuccesses ?? 0) > 0}
         />
       </div>
+
+      <Section title="Requirement intake" pad={false} right={<Crumb href={`/p/${workspaceId}/requirements`}>all requirements →</Crumb>}>
+        {requirements.length === 0 ? (
+          <Empty>No requirements in this projection yet. Run the current version of <code className="font-mono">awo publish</code> to add them.</Empty>
+        ) : (
+          <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
+            {requirements.slice(0, 6).map((r) => (
+              <div key={r.requirementId} className={`rounded-md border border-l-3 border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950 ${REQUIREMENT_STYLE[r.status] ?? ""}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <code className="font-mono text-[11px] font-semibold">{r.requirementId}</code>
+                  <span className="text-[10px] uppercase tracking-wide text-neutral-500">{r.status}</span>
+                </div>
+                <p className="mt-1 text-xs font-medium leading-snug">{r.title}</p>
+                <p className="mt-2 text-[11px] text-neutral-500">
+                  {r.criteria.covered}/{r.criteria.total} criteria covered
+                  {r.criteria.exceptions > 0 ? ` · ${r.criteria.exceptions} exception${r.criteria.exceptions === 1 ? "" : "s"}` : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
 
       <Section title="Board" pad={false}>
         {tasks.length === 0 ? (

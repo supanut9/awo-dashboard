@@ -73,7 +73,7 @@ export default async function RunsPage({
 
   return (
     <Page>
-      <ProjectNav workspaceId={workspaceId} active="overview" />
+      <ProjectNav workspaceId={workspaceId} active="runs" />
       <h1 className="mb-1 mt-1.5 text-base font-semibold">Runs</h1>
       <p className="mb-4 text-xs text-neutral-500">
         Every run, newest first — the same history <code className="font-mono">awo log list</code>{" "}

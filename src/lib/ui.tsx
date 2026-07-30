@@ -19,10 +19,17 @@ export const OUTCOME_TEXT: Record<string, string> = {
   running: "text-indigo-600 dark:text-indigo-400",
 };
 
+export const REQUIREMENT_STYLE: Record<string, string> = {
+  draft: "border-l-neutral-400",
+  proposed: "border-l-amber-500",
+  approved: "border-l-sky-500",
+  rejected: "border-l-red-500 opacity-75",
+};
+
 export function Page({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <main className="mx-auto max-w-6xl px-5 py-6">{children}</main>
+    <div className="min-h-screen bg-transparent text-slate-900 dark:bg-neutral-950 dark:text-neutral-100">
+      <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-7">{children}</main>
     </div>
   );
 }
@@ -52,7 +59,7 @@ export function ProjectNav({
   syncedAt,
 }: {
   workspaceId: string;
-  active: "overview" | "runs";
+  active: "overview" | "requirements" | "runs";
   projectKey?: string;
   projectName?: string;
   version?: string;
@@ -86,6 +93,7 @@ export function ProjectNav({
 
       <nav className="ml-2 flex gap-1">
         {tab(`/p/${workspaceId}`, "overview", "Board")}
+        {tab(`/p/${workspaceId}/requirements`, "requirements", "Requirements")}
         {tab(`/p/${workspaceId}/runs`, "runs", "Runs & logs")}
       </nav>
 
@@ -183,9 +191,9 @@ export function Section({
   pad?: boolean;
 }) {
   return (
-    <section className="mb-4 rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-      <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-800">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+    <section className="mb-4 overflow-hidden rounded-xl border border-white/80 bg-white/90 shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-900">
+      <header className="flex items-center justify-between border-b border-slate-200/80 px-4 py-3 dark:border-neutral-800">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
           {title}
         </h2>
         {right}
@@ -197,13 +205,13 @@ export function Section({
 
 export function Stat({ label, value, warn }: { label: string; value: ReactNode; warn?: boolean }) {
   return (
-    <div className="min-w-28 border-r border-neutral-200 px-4 py-3 last:border-r-0 dark:border-neutral-800">
+    <div className="min-w-28 border-r border-slate-200/80 px-4 py-3 last:border-r-0 dark:border-neutral-800">
       <div
         className={`text-xl font-semibold tracking-tight ${warn ? "text-amber-600 dark:text-amber-400" : ""}`}
       >
         {value}
       </div>
-      <div className="text-[10px] uppercase tracking-wide text-neutral-500">{label}</div>
+      <div className="text-[10px] uppercase tracking-[0.12em] text-neutral-500">{label}</div>
     </div>
   );
 }

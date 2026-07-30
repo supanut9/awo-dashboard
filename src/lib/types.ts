@@ -44,6 +44,19 @@ export interface GoalDoc {
   requirementBody?: string;
 }
 
+/** Requirement state is published independently of goals, including intake. */
+export interface RequirementDoc {
+  workspaceId: string;
+  requirementId: string;
+  title: string;
+  status: "draft" | "proposed" | "approved" | "rejected";
+  source: string;
+  goalId: string | null;
+  criteria: { total: number; covered: number; exceptions: number };
+  /** Only present when the workspace publishes with detail: "full". */
+  body?: string;
+}
+
 export interface TaskDoc {
   workspaceId: string;
   goalId: string;

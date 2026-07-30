@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Avenir Next", "Helvetica Neue", sans-serif;
+  --font-mono: "SFMono-Regular", "Cascadia Mono", monospace;
+}
+
+html { background: #e8edf4; }
+body {
+  min-width: 320px;
+  background:
+    radial-gradient(circle at 8% -8%, rgba(14, 116, 144, 0.15), transparent 30rem),
+    radial-gradient(circle at 92% 4%, rgba(217, 119, 6, 0.12), transparent 27rem),
+    #e8edf4;
+}
+
 /* Rendered markdown: run records and task bodies. Scoped so it cannot leak into
    the chrome, and tuned for dense technical prose rather than an article. */
 .prose-awo {
@@ -25,7 +39,7 @@
 .prose-awo li { margin: 0.15em 0; list-style: disc; }
 .prose-awo ol li { list-style: decimal; }
 .prose-awo code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   background: color-mix(in srgb, currentColor 8%, transparent);
   padding: 0.1em 0.3em;
