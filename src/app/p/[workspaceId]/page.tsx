@@ -8,6 +8,51 @@ export const dynamic = "force-dynamic";
 
 const STATUSES = ["todo", "queued", "running", "blocked", "in-review", "done", "cancelled"];
 
+function TaskBoard({ workspaceId, tasks }: { workspaceId: string; tasks: TaskDoc[] }) {
+  return (
+    <div className="overflow-x-auto px-3.5 pb-3.5">
+      <div className="grid min-w-[1050px] grid-cols-7 gap-2.5">
+        {STATUSES.map((status) => {
+          const inColumn = tasks.filter((task) => task.status === status);
+          return (
+            <div key={status}>
+              <div className="mb-1.5 flex justify-between px-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+                <span>{status}</span>
+                <span>{inColumn.length || ""}</span>
+              </div>
+              {inColumn.map((task) => (
+                <Link
+                  key={task.taskId}
+                  href={`/p/${workspaceId}/t/${task.taskId}`}
+                  className={`mb-2 block rounded-md border border-l-3 border-neutral-200 bg-neutral-50 p-2.5 transition hover:border-indigo-400 dark:border-neutral-800 dark:bg-neutral-950 ${STATUS_STYLE[task.status] ?? ""}`}
+                >
+                  <div className="font-mono text-[11px] font-semibold">{task.taskId}</div>
+                  <div className="mt-0.5 text-[11px] leading-snug">{task.name}</div>
+                  <div className="mt-1.5 text-[10px] text-neutral-500">
+                    {task.agent ?? "unassigned"}
+                    {task.attempts > 1 ? ` · ×${task.attempts}` : ""}
+                    {task.lastRunOutcome ? (
+                      <span className={OUTCOME_TEXT[task.lastRunOutcome] ?? ""}>
+                        {" · "}
+                        {task.lastRunOutcome}
+                      </span>
+                    ) : null}
+                  </div>
+                  {task.blockedReason && (
+                    <div className="mt-1 line-clamp-3 text-[10px] text-red-600 dark:text-red-400">
+                      {task.blockedReason}
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default async function ProjectPage({
   params,
 }: {
@@ -100,49 +145,44 @@ export default async function ProjectPage({
         )}
       </Section>
 
-      <Section title="Board" pad={false}>
+      <Section title="Goal boards" pad={false}>
         {tasks.length === 0 ? (
           <Empty>No tasks published.</Empty>
         ) : (
-          <div className="overflow-x-auto p-3.5">
-            <div className="grid min-w-[1050px] grid-cols-7 gap-2.5">
-              {STATUSES.map((status) => {
-                const inCol = tasks.filter((t) => t.status === status);
-                return (
-                  <div key={status}>
-                    <div className="mb-1.5 flex justify-between px-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
-                      <span>{status}</span>
-                      <span>{inCol.length || ""}</span>
-                    </div>
-                    {inCol.map((t) => (
-                      <Link
-                        key={t.taskId}
-                        href={`/p/${workspaceId}/t/${t.taskId}`}
-                        className={`mb-2 block rounded-md border border-l-3 border-neutral-200 bg-neutral-50 p-2.5 transition hover:border-indigo-400 dark:border-neutral-800 dark:bg-neutral-950 ${STATUS_STYLE[t.status] ?? ""}`}
-                      >
-                        <div className="font-mono text-[11px] font-semibold">{t.taskId}</div>
-                        <div className="mt-0.5 text-[11px] leading-snug">{t.name}</div>
-                        <div className="mt-1.5 text-[10px] text-neutral-500">
-                          {t.agent ?? "unassigned"}
-                          {t.attempts > 1 ? ` · ×${t.attempts}` : ""}
-                          {t.lastRunOutcome ? (
-                            <span className={OUTCOME_TEXT[t.lastRunOutcome] ?? ""}>
-                              {" · "}
-                              {t.lastRunOutcome}
-                            </span>
-                          ) : null}
-                        </div>
-                        {t.blockedReason && (
-                          <div className="mt-1 line-clamp-3 text-[10px] text-red-600 dark:text-red-400">
-                            {t.blockedReason}
-                          </div>
-                        )}
-                      </Link>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
+          <div className="divide-y divide-slate-200/80 dark:divide-neutral-800">
+            {goals.map((goal) => {
+              const own = tasks.filter((task) => task.goalId === goal.goalId);
+              const done = own.filter((task) => task.status === "done").length;
+              return (
+                <article key={goal.goalId} className="py-4 first:pt-3 last:pb-3">
+                  <header className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-3">
+                    <code className="font-mono text-[11px] font-semibold">{goal.goalId}</code>
+                    <span className="text-[10px] uppercase tracking-wide text-neutral-500">{goal.status}</span>
+                    <h3 className="basis-full text-sm font-semibold sm:basis-auto">{goal.title}</h3>
+                    <span className="text-[11px] text-neutral-500 sm:ml-auto">{done}/{own.length} done</span>
+                  </header>
+                  {own.length > 0 ? (
+                    <TaskBoard workspaceId={workspaceId} tasks={own} />
+                  ) : (
+                    <p className="px-4 pb-1 text-xs text-neutral-500">No tasks published for this goal.</p>
+                  )}
+                </article>
+              );
+            })}
+            {tasks.some((task) => !goals.some((goal) => goal.goalId === task.goalId)) && (
+              <article className="py-4 last:pb-3">
+                <header className="px-4 pb-3">
+                  <h3 className="text-sm font-semibold">Unassigned tasks</h3>
+                  <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">
+                    These tasks reference a goal that was not published.
+                  </p>
+                </header>
+                <TaskBoard
+                  workspaceId={workspaceId}
+                  tasks={tasks.filter((task) => !goals.some((goal) => goal.goalId === task.goalId))}
+                />
+              </article>
+            )}
           </div>
         )}
       </Section>
