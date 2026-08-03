@@ -59,7 +59,7 @@ export function ProjectNav({
   syncedAt,
 }: {
   workspaceId: string;
-  active: "overview" | "requirements" | "runs";
+  active: "overview" | "requirements" | "runs" | "organization";
   projectKey?: string;
   projectName?: string;
   version?: string;
@@ -94,6 +94,7 @@ export function ProjectNav({
       <nav className="ml-2 flex gap-1">
         {tab(`/p/${workspaceId}`, "overview", "Board")}
         {tab(`/p/${workspaceId}/requirements`, "requirements", "Requirements")}
+        {tab(`/p/${workspaceId}/organization`, "organization", "Organization")}
         {tab(`/p/${workspaceId}/runs`, "runs", "Runs & logs")}
       </nav>
 

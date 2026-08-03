@@ -21,6 +21,17 @@ export interface ProjectDoc {
   updatedAt: string;
 }
 
+export interface AgentDoc {
+  workspaceId: string;
+  agentId: string;
+  tier: string | null;
+  reportsTo: string | null;
+  delegatesTo: string[];
+  reviews: string[];
+  taskCount: number;
+  openTasks: number;
+}
+
 export interface TierStat {
   key: string;
   tier: string;
@@ -64,6 +75,7 @@ export interface TaskDoc {
   name: string;
   status: string;
   agent: string | null;
+  kind?: string;
   targets: string[];
   lastRunOutcome: string | null;
   attempts: number;

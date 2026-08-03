@@ -7,6 +7,36 @@ import { Markdown } from "@/lib/markdown";
 export const dynamic = "force-dynamic";
 
 const STATUSES = ["todo", "queued", "running", "blocked", "in-review", "done", "cancelled"];
+const DEFAULT_LANE_LIMIT = 5;
+const ATTENTION_LANE_LIMIT = 10;
+
+function TaskCard({ workspaceId, task }: { workspaceId: string; task: TaskDoc }) {
+  return (
+    <Link
+      href={`/p/${workspaceId}/t/${task.taskId}`}
+      className={`mb-2 block rounded-md border border-l-3 border-neutral-200 bg-neutral-50 p-2.5 transition hover:border-indigo-400 dark:border-neutral-800 dark:bg-neutral-950 ${STATUS_STYLE[task.status] ?? ""}`}
+    >
+      <div className="font-mono text-[11px] font-semibold">{task.taskId}</div>
+      <div className="mt-0.5 text-[11px] leading-snug">{task.name}</div>
+      <div className="mt-1.5 text-[10px] text-neutral-500">
+        {task.agent ?? "unassigned"}
+        {task.kind ? ` · ${task.kind}` : ""}
+        {task.attempts > 1 ? ` · ×${task.attempts}` : ""}
+        {task.lastRunOutcome ? (
+          <span className={OUTCOME_TEXT[task.lastRunOutcome] ?? ""}>
+            {" · "}
+            {task.lastRunOutcome}
+          </span>
+        ) : null}
+      </div>
+      {task.blockedReason && (
+        <div className="mt-1 line-clamp-3 text-[10px] text-red-600 dark:text-red-400">
+          {task.blockedReason}
+        </div>
+      )}
+    </Link>
+  );
+}
 
 function TaskBoard({ workspaceId, tasks }: { workspaceId: string; tasks: TaskDoc[] }) {
   return (
@@ -14,37 +44,27 @@ function TaskBoard({ workspaceId, tasks }: { workspaceId: string; tasks: TaskDoc
       <div className="grid min-w-[1050px] grid-cols-7 gap-2.5">
         {STATUSES.map((status) => {
           const inColumn = tasks.filter((task) => task.status === status);
+          const limit = ["running", "blocked", "in-review"].includes(status)
+            ? ATTENTION_LANE_LIMIT
+            : DEFAULT_LANE_LIMIT;
+          const visible = inColumn.slice(0, limit);
+          const hidden = inColumn.slice(limit);
           return (
             <div key={status}>
               <div className="mb-1.5 flex justify-between px-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
                 <span>{status}</span>
                 <span>{inColumn.length || ""}</span>
               </div>
-              {inColumn.map((task) => (
-                <Link
-                  key={task.taskId}
-                  href={`/p/${workspaceId}/t/${task.taskId}`}
-                  className={`mb-2 block rounded-md border border-l-3 border-neutral-200 bg-neutral-50 p-2.5 transition hover:border-indigo-400 dark:border-neutral-800 dark:bg-neutral-950 ${STATUS_STYLE[task.status] ?? ""}`}
-                >
-                  <div className="font-mono text-[11px] font-semibold">{task.taskId}</div>
-                  <div className="mt-0.5 text-[11px] leading-snug">{task.name}</div>
-                  <div className="mt-1.5 text-[10px] text-neutral-500">
-                    {task.agent ?? "unassigned"}
-                    {task.attempts > 1 ? ` · ×${task.attempts}` : ""}
-                    {task.lastRunOutcome ? (
-                      <span className={OUTCOME_TEXT[task.lastRunOutcome] ?? ""}>
-                        {" · "}
-                        {task.lastRunOutcome}
-                      </span>
-                    ) : null}
-                  </div>
-                  {task.blockedReason && (
-                    <div className="mt-1 line-clamp-3 text-[10px] text-red-600 dark:text-red-400">
-                      {task.blockedReason}
-                    </div>
-                  )}
-                </Link>
-              ))}
+              {visible.map((task) => <TaskCard key={task.taskId} workspaceId={workspaceId} task={task} />)}
+              {hidden.length > 0 && (
+                <details className="group">
+                  <summary className="mb-2 cursor-pointer list-none rounded-md border border-dashed border-neutral-300 px-2.5 py-2 text-center text-[10px] font-semibold text-neutral-600 transition hover:border-indigo-400 hover:text-indigo-600 dark:border-neutral-700 dark:text-neutral-400 dark:hover:text-indigo-400 [&::-webkit-details-marker]:hidden">
+                    <span className="group-open:hidden">Show {hidden.length} more</span>
+                    <span className="hidden group-open:inline">Show less</span>
+                  </summary>
+                  {hidden.map((task) => <TaskCard key={task.taskId} workspaceId={workspaceId} task={task} />)}
+                </details>
+              )}
             </div>
           );
         })}

@@ -44,8 +44,8 @@ awo publish --watch      # auto-sync: pushes on every change, debounced
 in `task run` or `task complete` waits on the network, so a dead connection degrades
 the dashboard and never the work.
 
-Six collections, keyed on `workspaceId`: `awo_projects`, `awo_requirements`,
-`awo_goals`, `awo_tasks`, `awo_runs`, `awo_events`. Nothing needs creating by hand — MongoDB makes the
+Seven collections, keyed on `workspaceId`: `awo_projects`, `awo_requirements`,
+`awo_goals`, `awo_tasks`, `awo_runs`, `awo_events`, `awo_agents`. Nothing needs creating by hand — MongoDB makes the
 collections on first write, and `awo publish` creates the indexes idempotently every
 time.
 
@@ -101,6 +101,10 @@ Be clear-eyed about this, because the repo is public and anyone may deploy it:
 - every published workspace, newest first
 - per project: the board across the seven lifecycle states, goals with progress,
   and the last 20 runs
+- compact task lanes that reveal overflow on demand instead of stretching every
+  goal board to the height of its busiest status
+- an Organization view for reporting, delegation, review relationships, and role
+  workload when the workspace publishes the optional `awo_agents` projection
 - click any card for a **task detail** page: definition, state, dependencies, and the
   last run's event stream and record (needs `detail: "full"`)
 - **tier/effort against outcomes** — success rate and average attempts per
